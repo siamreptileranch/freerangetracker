@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRR2 — Free Range Cage Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+:root{
+  --blue:#1877f2;--blue-dk:#166fe5;--blue-lt:#e7f3ff;
+  --bg:#f0f2f5;--surface:#fff;--border:#dde1e7;
+  --text:#050505;--muted:#65676b;--hover:#f2f2f2;
+  --green:#42b72a;--green-lt:#e6f4ea;
+  --red:#fa3e3e;--red-lt:#fdeaea;
+  --amber:#f7b928;--amber-lt:#fff3cd;
+  --orange:#ff6b00;--orange-lt:#fff0e6;
+  --gray:#8d9db6;--gray-lt:#f1f3f6;
+  --r:8px;--font:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh}
+
+/* NAV */
+.nav{background:var(--surface);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;box-shadow:0 2px 4px rgba(0,0,0,.1);position:sticky;top:0;z-index:300;gap:8px}
+.nav-logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;white-space:nowrap}
+.nav-logo-icon{background:var(--blue);color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.nav-tabs{display:flex;gap:2px}
+.nav-tab{padding:6px 14px;border-radius:6px;border:none;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);font-family:var(--font);border-bottom:3px solid transparent;white-space:nowrap;transition:background .1s}
+.nav-tab:hover{background:var(--hover)}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.nav-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.nav-clock{font-size:11px;color:var(--muted);white-space:nowrap}
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:190px 1fr;min-height:calc(100vh - 52px)}
+/* SIDEBAR */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:12px 8px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;position:sticky;top:52px;height:calc(100vh - 52px)}
+.sb-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.07em;padding:4px 8px 6px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sb-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:var(--r);cursor:pointer;border:none;background:transparent;width:100%;font-family:var(--font);font-size:12px;font-weight:500;color:var(--text);text-align:left;transition:background .1s}
+.sb-item:hover{background:var(--hover)}
+.sb-item.active{background:var(--blue-lt);color:var(--blue)}
+.sb-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sb-count{margin-left:auto;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--bg)}
+.sb-count.red{background:var(--red-lt);color:var(--red)}
+.sb-count.orange{background:var(--orange-lt);color:var(--orange)}
+.sb-div{height:1px;background:var(--border);margin:5px 0}
+.sb-legend{padding:8px;background:var(--bg);border-radius:var(--r);margin-top:4px;font-size:11px}
+.sb-legend-title{font-weight:700;color:var(--muted);margin-bottom:5px;font-size:10px;letter-spacing:.04em}
+.sb-leg-row{display:flex;align-items:center;gap:6px;padding:2px 0}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.1)}
+/* MAIN */
+.main{padding:14px;overflow-y:auto}
+/* SUMMARY STRIP */
+.summary-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px;margin-bottom:12px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 8px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.stat-val{font-size:20px;font-weight:700;line-height:1}
+.stat-label{font-size:10px;color:var(--muted);margin-top:2px;font-weight:600;letter-spacing:.02em}
+/* TOOLBAR */
+.toolbar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.tb-search{flex:1;min-width:120px;background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:6px 12px;font-size:13px;font-family:var(--font);color:var(--text);outline:none}
+.tb-search:focus{border-color:var(--blue)}
+.filter-btn{padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font);color:var(--muted);transition:all .1s;white-space:nowrap}
+.filter-btn:hover,.filter-btn.active{border-color:var(--blue);background:var(--blue-lt);color:var(--blue)}
+.fb-btn{background:var(--blue);color:#fff;border:none;border-radius:var(--r);padding:7px 14px;font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;transition:background .15s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.fb-btn:hover{background:var(--blue-dk)}
+.fb-btn.sm{font-size:11px;padding:5px 10px}
+/* CAGE CARDS GRID */
+.cages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.cage-card{background:var(--surface);border:2px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:box-shadow .15s,border-color .15s}
+.cage-card.ok{border-color:#42b72a}
+.cage-card.warning{border-color:var(--amber)}
+.cage-card.urgent{border-color:var(--orange)}
+.cage-card.critical{border-color:var(--red);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(250,62,62,.4)}50%{box-shadow:0 0 0 6px rgba(250,62,62,0)}}
+.cage-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#fafbfc;border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+.cage-header:hover{background:var(--hover)}
+.cage-num{font-size:15px;font-weight:700}
+.cage-sev-pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.cage-sev-pill.ok{background:var(--green-lt);color:#1a5c0c}
+.cage-sev-pill.warning{background:var(--amber-lt);color:#856404}
+.cage-sev-pill.urgent{background:var(--orange-lt);color:#7a3200}
+.cage-sev-pill.critical{background:var(--red-lt);color:#7c0000}
+.cage-sev-pill.unchecked{background:var(--gray-lt);color:var(--gray)}
+.cage-issue-icons{font-size:12px;display:flex;gap:2px;flex-wrap:wrap;max-width:80px}
+/* SUB-CAGE GRID A-F */
+.sub-cages{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--border)}
+.sub-cage{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 4px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.sub-cage:nth-child(3n){border-right:none}
+.sub-cage:nth-child(4),.sub-cage:nth-child(5),.sub-cage:nth-child(6){border-bottom:none}
+.sub-cage-label{font-size:10px;font-weight:700;color:var(--muted)}
+.sub-cond{font-size:9px;font-weight:700;padding:1px 4px;border-radius:5px;white-space:nowrap;cursor:pointer;user-select:none;text-align:center;min-width:44px;line-height:1.4}
+.sub-cond.HEALTHY{background:#e6f4ea;color:#1a5c0c}
+.sub-cond.FF{background:#fdeaea;color:#9c0006}
+.sub-cond.SW{background:#fff0e6;color:#7a3200}
+.sub-cond.SKY{background:#fff3cd;color:#856404}
+.sub-cond.SKINNY-OK{background:#e6f4ea;color:#375623}
+.sub-cond.NONE{background:var(--gray-lt);color:var(--gray)}
+/* dragon M/F counts inline on card */
+.sub-mf{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:700}
+.sub-m{color:#1877f2}
+.sub-f{color:#d63384}
+.sub-total{color:var(--muted);font-size:9px}
+/* open inventory button */
+.sub-inv-btn{font-size:9px;padding:1px 6px;border-radius:10px;border:1px dashed var(--blue);background:transparent;color:var(--blue);cursor:pointer;font-family:var(--font);font-weight:600;margin-top:1px;white-space:nowrap}
+.sub-inv-btn:hover{background:var(--blue-lt)}
+/* cage footer */
+.cage-footer{padding:5px 10px;display:flex;align-items:center;justify-content:space-between;background:#fafbfc;border-top:1px solid var(--border)}
+.cage-total{font-size:11px;color:var(--muted);font-weight:600;display:flex;gap:8px}
+.cage-total .m{color:#1877f2;font-weight:700}
+.cage-total .f{color:#d63384;font-weight:700}
+.cage-edit-btn{font-size:11px;padding:3px 10px;border-radius:20px;border:1.5px solid var(--border);background:transparent;cursor:pointer;font-family:var(--font);color:var(--muted);transition:all .1s}
+.cage-edit-btn:hover{border-color:var(--blue);color:var(--blue)}
+/* SEVERITY */
+.sev-row{display:flex;gap:5px;margin-bottom:12px}
+.sev-btn{flex:1;padding:7px 4px;border-radius:var(--r);border:2px solid var(--border);background:var(--bg);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);text-align:center;transition:all .1s}
+.sev-btn.sel-ok{border-color:var(--green);background:var(--green-lt);color:#1a5c0c}
+.sev-btn.sel-warning{border-color:var(--amber);background:var(--amber-lt);color:#856404}
+.sev-btn.sel-urgent{border-color:var(--orange);background:var(--orange-lt);color:#7a3200}
+.sev-btn.sel-critical{border-color:var(--red);background:var(--red-lt);color:#7c0000}
+/* ISSUES */
+.issue-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.issue-check{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:var(--r);border:1.5px solid var(--border);cursor:pointer;transition:all .1s;user-select:none}
+.issue-check:hover{border-color:var(--blue);background:var(--blue-lt)}
+.issue-check.checked{border-color:var(--red);background:var(--red-lt)}
+.issue-check.checked .ic-label{color:var(--red)}
+.ic-icon{font-size:15px;flex-shrink:0}
+.ic-label{font-size:12px;font-weight:600}
+/* POS CONDITION GRID (in cage modal) */
+.pos-cond-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.pos-cond-cell{border:1.5px solid var(--border);border-radius:var(--r);padding:7px 5px;text-align:center;cursor:pointer;transition:all .15s}
+.pos-cond-cell:hover{border-color:var(--blue)}
+.pos-cond-cell.HEALTHY{background:#e6f4ea;border-color:#42b72a}
+.pos-cond-cell.FF{background:#fdeaea;border-color:#fa3e3e}
+.pos-cond-cell.SW{background:#fff0e6;border-color:#ff6b00}
+.pos-cond-cell.SKY{background:#fff3cd;border-color:#f7b928}
+.pos-cond-cell.SKINNY-OK{background:#e6f4ea;border-color:#42b72a}
+.pos-cond-cell.NONE{background:var(--bg)}
+.pcc-label{font-size:10px;font-weight:700;color:var(--muted)}
+.pcc-cond{font-size:11px;font-weight:700;margin-top:2px}
+.HEALTHY .pcc-cond{color:#1a5c0c}.FF .pcc-cond{color:#9c0006}.SW .pcc-cond{color:#7a3200}.SKY .pcc-cond{color:#856404}.SKINNY-OK .pcc-cond{color:#375623}.NONE .pcc-cond{color:var(--gray)}
+.pcc-summary{font-size:10px;color:var(--muted);margin-top:2px}
+/* HISTORY */
+.history-entry{border-left:3px solid var(--border);padding:7px 10px;margin-bottom:6px;border-radius:0 var(--r) var(--r) 0;background:var(--bg)}
+.history-entry.ok{border-left-color:var(--green)}.history-entry.warning{border-left-color:var(--amber)}.history-entry.urgent{border-left-color:var(--orange)}.history-entry.critical{border-left-color:var(--red)}
+.he-top{display:flex;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px}
+.he-date{font-size:11px;color:var(--muted)}
+.he-sev{font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px}
+.he-issues{font-size:12px;margin-bottom:2px;font-weight:500}
+.he-note{font-size:11px;color:var(--muted)}
+/* ALERTS */
+.alert-feed{display:flex;flex-direction:column;gap:8px}
+.af-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:11px 14px;display:flex;align-items:flex-start;gap:10px}
+.af-card.critical{border-color:var(--red);background:var(--red-lt)}.af-card.urgent{border-color:var(--orange);background:var(--orange-lt)}.af-card.warning{border-color:var(--amber);background:var(--amber-lt)}
+.af-icon{font-size:20px;flex-shrink:0}.af-body{flex:1;min-width:0}.af-cage{font-weight:700;font-size:14px}.af-issues{font-size:12px;margin-top:3px}.af-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.af-resolve{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);white-space:nowrap;flex-shrink:0;align-self:center}
+.af-resolve:hover{background:var(--green-lt);border-color:var(--green);color:#1a5c0c}
+/* LOG */
+.log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:7px;overflow:hidden}
+.log-card-header{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;cursor:pointer}
+.log-card-header:hover{background:var(--hover)}
+.lc-sev{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.lc-sev.ok{background:var(--green-lt);color:#1a5c0c}.lc-sev.warning{background:var(--amber-lt);color:#856404}.lc-sev.urgent{background:var(--orange-lt);color:#7a3200}.lc-sev.critical{background:var(--red-lt);color:#7c0000}
+.log-body{padding:8px 13px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)}
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;align-items:flex-start;justify-content:center;padding:60px 12px 20px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:12px;width:100%;max-width:520px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal-lg{max-width:600px}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:16px;font-weight:700}.modal-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.modal-close{width:32px;height:32px;border-radius:50%;border:none;background:var(--bg);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--muted);flex-shrink:0}
+.modal-close:hover{background:var(--border)}
+.modal-body{padding:14px 18px}
+.modal-footer{padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.field{margin-bottom:12px}
+.field-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:5px;display:block}
+.field-input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);padding:8px 11px;font-size:13px;font-family:var(--font);color:var(--text);outline:none;transition:border-color .15s}
+.field-input:focus{border-color:var(--blue);background:#fff}
+.field-textarea{resize:vertical;min-height:55px}
+/* INVENTORY MODAL SPECIFIC */
+.inv-tabs{display:flex;gap:3px;margin-bottom:10px;flex-wrap:wrap}
+.inv-tab{padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:var(--font);transition:all .1s}
+.inv-tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.morph-group{display:none}.morph-group.active{display:block}
+.inv-section-title{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;padding:5px 8px;background:var(--bg);border-radius:6px;margin-bottom:5px;border-left:3px solid var(--blue)}
+.morph-row{display:flex;flex-direction:column;padding:5px 4px;border-bottom:1px solid #f5f5f5}
+.morph-row:last-child{border-bottom:none}
+.morph-row-top{display:flex;align-items:center;gap:6px;width:100%}
+.morph-name{flex:1;font-size:12px;font-weight:500}
+.morph-m{color:#1877f2;font-size:10px;font-weight:700;min-width:12px;text-align:center}
+.morph-f{color:#d63384;font-size:10px;font-weight:700;min-width:12px;text-align:center}
+.morph-total{font-size:10px;color:var(--muted);min-width:22px;text-align:right}
+.add-animal-btn{font-size:10px;padding:2px 8px;border-radius:20px;border:1.5px dashed var(--blue);background:transparent;color:var(--blue);cursor:pointer;font-family:var(--font);font-weight:600;transition:background .1s}
+.add-animal-btn:hover{background:var(--blue-lt)}
+.add-animal-btn.f{border-color:#d63384;color:#d63384}
+.add-animal-btn.f:hover{background:#fce7f3}
+.animal-rows{margin-top:5px;width:100%}
+.animal-row{display:flex;align-items:center;gap:4px;padding:4px 6px;background:#fff;border:1px solid var(--border);border-radius:6px;margin-bottom:3px;flex-wrap:wrap}
+.ar-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.ar-badge.m{background:#dbeafe;color:#1e40af}.ar-badge.f{background:#fce7f3;color:#9d174d}
+.ar-input{flex:1;min-width:55px;max-width:85px;padding:3px 6px;border:1.5px solid var(--border);border-radius:5px;font-size:11px;font-family:var(--font);background:var(--bg);color:var(--text)}
+.ar-input:focus{outline:none;border-color:var(--blue);background:#fff}
+.ar-label{font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap}
+.ar-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:0 2px;flex-shrink:0;line-height:1}
+.inv-totals{display:flex;gap:8px;padding:8px 10px;background:#f8faff;border-radius:6px;margin-top:8px;border:1px solid #dde8ff}
+.inv-total-item{text-align:center;flex:1}
+.inv-total-val{font-size:16px;font-weight:700}
+.inv-total-label{font-size:10px;color:var(--muted);font-weight:600}
+/* EMPTY */
+.empty-state{text-align:center;padding:36px 20px;color:var(--muted)}
+.empty-state .es-icon{font-size:32px;margin-bottom:8px}
+.empty-state .es-text{font-size:13px}
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#050505;color:#fff;padding:10px 18px;border-radius:var(--r);font-size:13px;font-weight:500;opacity:0;transition:all .25s;z-index:999;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.3);white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:640px){
+  .layout{grid-template-columns:1fr}.sidebar{display:none}
+  .cages-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .issue-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-icon">🦎</div>
+    <div>
+      <div>Free Range Cage Tracker</div>
+      <div style="font-size:10px;color:var(--muted);font-weight:400">SRR2 · Cages 1–25</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('grid')">🗺 Cage Map</button>
+    <button class="nav-tab" onclick="showPage('alerts')">🚨 Alerts</button>
+    <button class="nav-tab" onclick="showPage('log')">📋 Log</button>
+  </div>
+  <div class="nav-right">
+    <span id="sync-pill" style="font-size:11px;padding:4px 11px;border-radius:20px;font-weight:600;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb">⬤ Loading…</span>
+    <span id="nav-badge" style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;display:none">0!</span>
+    <span class="nav-clock" id="clock"></span>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sb-title">FILTER BY STATUS</div>
+    <button class="sb-item active" onclick="setFilter('all')"><span class="sb-dot" style="background:var(--border)"></span>All cages<span class="sb-count" id="sb-all">0</span></button>
+    <button class="sb-item" onclick="setFilter('critical')"><span class="sb-dot" style="background:var(--red)"></span>Critical<span class="sb-count red" id="sb-critical">0</span></button>
+    <button class="sb-item" onclick="setFilter('urgent')"><span class="sb-dot" style="background:var(--orange)"></span>Urgent<span class="sb-count orange" id="sb-urgent">0</span></button>
+    <button class="sb-item" onclick="setFilter('warning')"><span class="sb-dot" style="background:var(--amber)"></span>Warning<span class="sb-count" id="sb-warning">0</span></button>
+    <button class="sb-item" onclick="setFilter('ok')"><span class="sb-dot" style="background:var(--green)"></span>OK<span class="sb-count" id="sb-ok">0</span></button>
+    <button class="sb-item" onclick="setFilter('unchecked')"><span class="sb-dot" style="background:var(--gray)"></span>Unchecked<span class="sb-count" id="sb-unchecked">0</span></button>
+    <div class="sb-div"></div>
+    <div class="sb-title">FILTER BY ISSUE</div>
+    <button class="sb-item" onclick="setFilter('fungus')">🍄 Fungus (FF)</button>
+    <button class="sb-item" onclick="setFilter('swollen')">🦴 Swollen Joints (SW)</button>
+    <button class="sb-item" onclick="setFilter('skinny')">⚖️ Skinny (SKY)</button>
+    <button class="sb-item" onclick="setFilter('skinny_ok')">🌿 Skinny-OK</button>
+    <button class="sb-item" onclick="setFilter('death')">💀 Death</button>
+    <button class="sb-item" onclick="setFilter('not_eating')">🍽 Not eating</button>
+    <button class="sb-item" onclick="setFilter('injury')">🩹 Injury</button>
+    <button class="sb-item" onclick="setFilter('check_now')">👁 Check now</button>
+    <div class="sb-div"></div>
+    <div class="sb-legend">
+      <div class="sb-legend-title">COLOUR KEY</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:var(--green)"></span>✅ OK</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:var(--amber)"></span>🟡 Warning</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:var(--orange)"></span>🟠 Urgent</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:var(--red)"></span>🔴 Critical</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:var(--gray)"></span>⬜ Unchecked</div>
+      <div class="sb-div"></div>
+      <div class="sb-legend-title">CONDITIONS</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:#42b72a"></span>HEALTHY</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:#fa3e3e"></span>FF — Fungus</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:#ff6b00"></span>SW — Swollen Joints</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:#f7b928"></span>SKY — Skinny</div>
+      <div class="sb-leg-row"><span class="leg-dot" style="background:#42b72a"></span>SKINNY-OK</div>
+    </div>
+    <div class="sb-div"></div>
+    <button class="sb-item" onclick="syncAllToday()" style="color:var(--blue);font-weight:700">☁️ Sync to Sheet</button>
+    <button class="sb-item" onclick="exportData()" style="color:var(--blue)">⬇ Export CSV</button>
+    <button class="sb-item" onclick="resetDay()" style="color:var(--red)">↺ Reset daily</button>
+  </aside>
+
+  <main class="main">
+    <div id="page-grid">
+      <div class="summary-strip" id="summary-strip"></div>
+      <div class="toolbar">
+        <input class="tb-search" id="search-input" placeholder="🔍 Search cage number..." oninput="renderGrid()">
+        <button class="filter-btn active" id="fb-all"       onclick="setFilter('all')">All</button>
+        <button class="filter-btn"        id="fb-critical"  onclick="setFilter('critical')">🔴</button>
+        <button class="filter-btn"        id="fb-urgent"    onclick="setFilter('urgent')">🟠</button>
+        <button class="filter-btn"        id="fb-warning"   onclick="setFilter('warning')">🟡</button>
+        <button class="filter-btn"        id="fb-ok"        onclick="setFilter('ok')">✅</button>
+        <button class="filter-btn"        id="fb-unchecked" onclick="setFilter('unchecked')">⬜</button>
+        <button class="fb-btn sm" onclick="syncAllToday()">☁️ Sync</button>
+      </div>
+      <div class="cages-grid" id="cages-grid"></div>
+    </div>
+    <div id="page-alerts" style="display:none">
+      <div class="summary-strip" id="alert-summary"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.05em;margin-bottom:10px">ACTIVE ISSUES</div>
+      <div class="alert-feed" id="alert-feed"></div>
+    </div>
+    <div id="page-log" style="display:none">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <input class="tb-search" id="log-search" placeholder="🔍 Search cage..." oninput="renderLog()" style="max-width:180px">
+        <select class="field-input" id="log-filter-sel" onchange="renderLog()" style="width:auto;padding:6px 10px;font-size:12px">
+          <option value="all">All entries</option>
+          <option value="critical">Critical only</option>
+          <option value="urgent">Urgent only</option>
+          <option value="warning">Warning only</option>
+          <option value="ok">OK checks</option>
+        </select>
+        <button class="fb-btn sm" onclick="exportData()" style="margin-left:auto">⬇ Export CSV</button>
+      </div>
+      <div id="log-list"></div>
+    </div>
+  </main>
+</div>
+
+<!-- CAGE MODAL (severity / issues / conditions) -->
+<div class="modal-overlay" id="cage-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><div class="modal-title" id="modal-title">Cage 1</div><div class="modal-sub">Free Range — SRR2</div></div>
+      <button class="modal-close" onclick="closeModal('cage-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <div class="field-label">SEVERITY</div>
+        <div class="sev-row">
+          <button class="sev-btn" id="sev-ok"      onclick="setSev('ok')">✅ OK</button>
+          <button class="sev-btn" id="sev-warning"  onclick="setSev('warning')">🟡 Warning</button>
+          <button class="sev-btn" id="sev-urgent"   onclick="setSev('urgent')">🟠 Urgent</button>
+          <button class="sev-btn" id="sev-critical" onclick="setSev('critical')">🔴 Critical</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">ISSUES FOUND</div>
+        <div class="issue-grid" id="issue-grid"></div>
+      </div>
+      <div class="field">
+        <div class="field-label">SUB-CAGES A–F · CONDITION (tap to cycle)</div>
+        <div class="pos-cond-grid" id="pos-cond-grid"></div>
+      </div>
+      <div class="field">
+        <label class="field-label">NOTES</label>
+        <textarea class="field-input field-textarea" id="modal-notes" placeholder="Describe findings..."></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label">CHECKED BY</label>
+        <input class="field-input" id="modal-employee" placeholder="Your name">
+      </div>
+      <div class="field">
+        <div class="field-label">HISTORY</div>
+        <div id="modal-history" style="max-height:160px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="fb-btn" style="background:var(--bg);color:var(--text);border:1px solid var(--border)" onclick="closeModal('cage-modal')">Cancel</button>
+      <button class="fb-btn" style="background:#42b72a" onclick="saveEntry(false)">💾 Save</button>
+      <button class="fb-btn" onclick="saveEntry(true)">☁️ Save &amp; Sync</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVENTORY MODAL (per sub-cage, morphs + M/F) -->
+<div class="modal-overlay" id="inv-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div><div class="modal-title" id="inv-modal-title">Cage 1 · Sub-cage A</div><div class="modal-sub" id="inv-modal-sub">Animals in this sub-cage</div></div>
+      <button class="modal-close" onclick="closeModal('inv-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="inv-container"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="fb-btn" style="background:var(--bg);color:var(--text);border:1px solid var(--border)" onclick="closeModal('inv-modal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────
+var ALL_CAGES=[]; for(var i=1;i<=25;i++) ALL_CAGES.push(i);
+var POSITIONS=['A','B','C','D','E','F'];
+var COND_CYCLE=['NONE','HEALTHY','FF','SW','SKY','SKINNY-OK'];
+var COND_LABEL={NONE:'—',HEALTHY:'HEALTHY',FF:'FF',SW:'SW',SKY:'SKY','SKINNY-OK':'SKY-OK'};
+var COND_ICON ={NONE:'',HEALTHY:'✅',FF:'🍄',SW:'🦴',SKY:'⚖️','SKINNY-OK':'🌿'};
+var ISSUES=[
+  {id:'fungus',icon:'🍄',en:'Fungus (FF)'},{id:'swollen',icon:'🦴',en:'Swollen Joints (SW)'},
+  {id:'skinny',icon:'⚖️',en:'Skinny (SKY)'},{id:'skinny_ok',icon:'🌿',en:'Skinny-OK'},
+  {id:'death',icon:'💀',en:'Death'},{id:'not_eating',icon:'🍽',en:'Not eating'},
+  {id:'injury',icon:'🩹',en:'Injury'},{id:'dirty',icon:'🧹',en:'Dirty'},
+  {id:'no_water',icon:'🚫',en:'No water'},{id:'escaped',icon:'🚪',en:'Escaped'},
+  {id:'no_marking',icon:'🏷',en:'No marking'},{id:'check_now',icon:'👁',en:'Check now'},
+];
+var COLOR_GROUPS=[
+  {id:'het',label:'HET',colors:['HET ALBINO','HET DARK RED','HET ZERO','HET TRANS','HET WITBLIT','HET THUNDERBOLT']},
+  {id:'poss',label:'POSS HET',colors:['POSS HET ZERO ALBINO','POSS HET WITBLIT ALBINO','POSS HET ALBINO']},
+  {id:'base',label:'Base Morphs',colors:['FANCY','RED','BLUE BAR','LEATHERBACK','DUNNER','GENETIC STRIPE','TRANS','YELLOW','SNOW','SN (PASTEL)']},
+  {id:'pure',label:'Pure Morphs',colors:['ALBINO','DARK RED','ZERO','WITBLIT','THUNDERBOLT','MARBLE','UC']},
+  {id:'special',label:'Special',colors:['GHOST YELLOW (G/Y)','GHOST ORANGE (G/O)','SUPER BLUE (SB)','PHANTOM RED (PR)','CLOWN (CL)','FLAME (FL)','MAGMA (M)','CORAL (C)','PARADOX (PARA)','HET PARADOX (HP)']}
+];
+var ALL_COLORS=[]; COLOR_GROUPS.forEach(function(g){ALL_COLORS=ALL_COLORS.concat(g.colors);});
+var SHEET_URL='https://script.google.com/macros/s/AKfycbxr9_sRMlDX15wyYIu2U8b35d1unHBgIXLxaSTPJSfHOK4mLCJSeUoS7nATBxBn6jF_kQ/exec';
+
+// ── DATA ─────────────────────────────────────────────────
+function loadData(){try{var d=localStorage.getItem('srr2_fr3');return d?JSON.parse(d):{cages:{},log:[]};}catch(e){return{cages:{},log:[]};}}
+function saveData(){localStorage.setItem('srr2_fr3',JSON.stringify(DATA));}
+var DATA=loadData();
+
+// ── STATE ────────────────────────────────────────────────
+var currentFilter='all', currentCageId=null, currentSev='', currentIssues=[];
+var currentInvCage=null, currentInvPos=null, currentInvGroup='het';
+
+// ── HELPERS ──────────────────────────────────────────────
+function pad(n){return String(n).padStart(2,'0');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function nowStr(){var d=new Date();return d.toISOString().slice(0,10)+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function getCage(id){return DATA.cages[id]||{};}
+function getCageState(id){var c=getCage(id);if(!c.lastDate||c.lastDate!==todayStr())return'unchecked';return c.severity||'unchecked';}
+function getCageIssues(id){var c=getCage(id);return(c.lastDate===todayStr()?c.issues:[])||[];}
+function getPositions(id){return getCage(id).positions||{};}
+// inventory key: "cageId::pos::color::sex"
+function invKey(cageId,pos,color,sex){return cageId+'::'+pos+'::'+color+'::'+sex;}
+function getSubInv(cageId,pos){
+  var inv=getCage(cageId).inventory||{};
+  var result={};
+  ALL_COLORS.forEach(function(c){
+    var mk=invKey(cageId,pos,c,'m'), fk=invKey(cageId,pos,c,'f');
+    if(inv[mk]&&inv[mk].length) result[c+'::m']=inv[mk];
+    if(inv[fk]&&inv[fk].length) result[c+'::f']=inv[fk];
+  });
+  return result;
+}
+function subInvTotals(cageId,pos){
+  var inv=getCage(cageId).inventory||{};
+  var m=0,f=0;
+  ALL_COLORS.forEach(function(c){
+    var ma=inv[invKey(cageId,pos,c,'m')]||[]; var fa=inv[invKey(cageId,pos,c,'f')]||[];
+    m+=ma.length; f+=fa.length;
+  });
+  return{m:m,f:f,total:m+f};
+}
+function cageTotals(cageId){
+  var m=0,f=0;
+  POSITIONS.forEach(function(p){var t=subInvTotals(cageId,p);m+=t.m;f+=t.f;});
+  return{m:m,f:f,total:m+f};
+}
+function allTotals(){
+  var m=0,f=0;
+  ALL_CAGES.forEach(function(id){var t=cageTotals(id);m+=t.m;f+=t.f;});
+  return{m:m,f:f,total:m+f};
+}
+function sevColor(s){return{ok:'#42b72a',warning:'#f7b928',urgent:'#ff6b00',critical:'#fa3e3e',unchecked:'#8d9db6'}[s]||'#8d9db6';}
+function sevLabel(s){return{ok:'✅ OK',warning:'🟡 Warning',urgent:'🟠 Urgent',critical:'🔴 Critical',unchecked:'⬜ Unchecked'}[s]||'⬜ Unchecked';}
+function issueObj(id){return ISSUES.find(function(x){return x.id===id;})||null;}
+function issueLabel(id){var i=issueObj(id);return i?i.icon+' '+i.en:id;}
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2200);}
+function tick(){var n=new Date();document.getElementById('clock').textContent=n.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+' '+pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());}
+setInterval(tick,1000);tick();
+
+// ── FILTER ───────────────────────────────────────────────
+function setFilter(f){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('.sb-item').forEach(function(el){el.classList.remove('active');});
+  var fb=document.getElementById('fb-'+f);
+  if(fb)fb.classList.add('active'); else document.getElementById('fb-all').classList.add('active');
+  renderGrid();
+}
+function cageMatchesFilter(id){
+  var s=getCageState(id),issues=getCageIssues(id);
+  if(currentFilter==='all')return true;
+  if(['ok','warning','urgent','critical','unchecked'].indexOf(currentFilter)>-1)return s===currentFilter;
+  return issues.indexOf(currentFilter)>-1;
+}
+
+// ── SUMMARY ──────────────────────────────────────────────
+function updateSummary(){
+  var counts={ok:0,warning:0,urgent:0,critical:0,unchecked:0};
+  ALL_CAGES.forEach(function(id){var s=getCageState(id);counts[s]=(counts[s]||0)+1;});
+  var total=ALL_CAGES.length,checked=total-counts.unchecked;
+  var hc={FF:0,SW:0,SKY:0,'SKINNY-OK':0};
+  ALL_CAGES.forEach(function(id){var pos=getPositions(id);POSITIONS.forEach(function(p){var c=pos[p];if(c&&hc[c]!==undefined)hc[c]++;});});
+  var at=allTotals();
+  function sc(l,v,c){return'<div class="stat-card"><div class="stat-val" style="color:'+c+'">'+v+'</div><div class="stat-label">'+esc(l)+'</div></div>';}
+  document.getElementById('summary-strip').innerHTML=
+    sc('♂ Males',at.m,'#1877f2')+sc('♀ Females',at.f,'#d63384')+sc('🐉 Total BDs',at.total,'#050505')+
+    sc('🔴 Critical',counts.critical,'#fa3e3e')+sc('🟠 Urgent',counts.urgent,'#ff6b00')+sc('🟡 Warning',counts.warning,'#f7b928')+
+    sc('🍄 FF',hc.FF,'#fa3e3e')+sc('🦴 SW',hc.SW,'#ff6b00')+sc('⚖️ SKY',hc.SKY,'#f7b928')+sc('🌿 SKY-OK',hc['SKINNY-OK'],'#42b72a');
+  ['all','critical','urgent','warning','ok','unchecked'].forEach(function(k){var el=document.getElementById('sb-'+k);if(el)el.textContent=k==='all'?total:(counts[k]||0);});
+  var alerts=counts.critical+counts.urgent;
+  var badge=document.getElementById('nav-badge');
+  if(alerts>0){badge.style.display='';badge.textContent=alerts+'!';}else badge.style.display='none';
+}
+
+// ── RENDER GRID ──────────────────────────────────────────
+function renderGrid(){
+  updateSummary();
+  var search=document.getElementById('search-input').value.trim().toLowerCase();
+  var html='';
+  ALL_CAGES.forEach(function(id){
+    var state=getCageState(id),issues=getCageIssues(id),pos=getPositions(id);
+    var ms=!search||String(id).includes(search)||('cage '+id).includes(search);
+    var mf=cageMatchesFilter(id);
+    if(!ms||!mf){html+='<div class="cage-card" style="opacity:.2;pointer-events:none"><div class="cage-header"><span class="cage-num">Cage '+id+'</span></div></div>';return;}
+    var ihtml=issues.slice(0,4).map(function(iss){var d=issueObj(iss);return d?'<span title="'+esc(d.en)+'">'+d.icon+'</span>':'';}).join('');
+    var hcSeen={};POSITIONS.forEach(function(p){var c=pos[p];if(c&&c!=='NONE'&&c!=='HEALTHY'&&!hcSeen[c]){hcSeen[c]=1;ihtml+='<span title="'+c+'">'+COND_ICON[c]+'</span>';}});
+    var pillCls=state==='unchecked'?'unchecked':state;
+    var ct=cageTotals(id);
+    html+='<div class="cage-card '+state+'">';
+    html+='<div class="cage-header" onclick="openCageModal('+id+')">';
+    html+='<span class="cage-num">Cage '+id+'</span>';
+    html+='<div class="cage-issue-icons">'+ihtml+'</div>';
+    html+='<span class="cage-sev-pill '+pillCls+'">'+sevLabel(state).replace(/[✅🟡🟠🔴⬜] /,'')+'</span>';
+    html+='</div>';
+    // sub-cages
+    html+='<div class="sub-cages">';
+    POSITIONS.forEach(function(p){
+      var cond=pos[p]||'NONE';
+      var st=subInvTotals(id,p);
+      html+='<div class="sub-cage">';
+      html+='<div class="sub-cage-label">'+p+'</div>';
+      html+='<div class="sub-cond '+cond+'" onclick="cycleCondInline('+id+',\''+p+'\')" title="Tap to change condition">'+COND_LABEL[cond]+'</div>';
+      if(st.total>0){
+        html+='<div class="sub-mf"><span class="sub-m">'+st.m+'♂</span><span class="sub-f">'+st.f+'♀</span></div>';
+      }
+      html+='<button class="sub-inv-btn" onclick="openInvModal('+id+',\''+p+'\',event)">🐉 Animals</button>';
+      html+='</div>';
+    });
+    html+='</div>';
+    // footer
+    html+='<div class="cage-footer">';
+    html+='<span class="cage-total"><span class="m">'+ct.m+'♂</span><span class="f">'+ct.f+'♀</span><span style="color:var(--muted)">= '+ct.total+' total</span></span>';
+    html+='<button class="cage-edit-btn" onclick="openCageModal('+id+')">✏️ Check</button>';
+    html+='</div>';
+    html+='</div>';
+  });
+  document.getElementById('cages-grid').innerHTML=html||'<div class="empty-state"><div class="es-icon">🔍</div><div class="es-text">No cages match.</div></div>';
+}
+
+// ── INLINE CONDITION CYCLE ────────────────────────────────
+function ensureCage(id){
+  if(!DATA.cages[id])DATA.cages[id]={};
+  var c=DATA.cages[id];
+  if(!c.positions)c.positions={};
+  if(!c.inventory)c.inventory={};
+}
+function cycleCondInline(id,pos){
+  ensureCage(id);
+  var cur=DATA.cages[id].positions[pos]||'NONE';
+  var idx=COND_CYCLE.indexOf(cur);
+  DATA.cages[id].positions[pos]=COND_CYCLE[(idx+1)%COND_CYCLE.length];
+  saveData();renderGrid();
+}
+
+// ── CAGE MODAL ────────────────────────────────────────────
+function openCageModal(id){
+  currentCageId=id; currentSev=''; currentIssues=[];
+  var c=getCage(id);
+  if(c.lastDate===todayStr()){currentSev=c.severity||'';currentIssues=(c.issues||[]).slice();}
+  document.getElementById('modal-title').textContent='Cage '+id;
+  document.getElementById('modal-notes').value=(c.lastDate===todayStr()?c.notes:'')||'';
+  document.getElementById('modal-employee').value=localStorage.getItem('srr2_emp')||'';
+  renderSevBtns();renderIssueGrid();renderPosCond(id);renderHistory(id);
+  document.getElementById('cage-modal').classList.add('open');
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function setSev(s){currentSev=s;renderSevBtns();}
+function renderSevBtns(){['ok','warning','urgent','critical'].forEach(function(s){document.getElementById('sev-'+s).className='sev-btn'+(currentSev===s?' sel-'+s:'');});}
+function renderIssueGrid(){
+  document.getElementById('issue-grid').innerHTML=ISSUES.map(function(iss){
+    var chk=currentIssues.indexOf(iss.id)>-1;
+    return'<div class="issue-check'+(chk?' checked':'')+'" onclick="toggleIssue(\''+iss.id+'\')"><span class="ic-icon">'+iss.icon+'</span><div class="ic-label">'+esc(iss.en)+'</div></div>';
+  }).join('');
+}
+function toggleIssue(id){var i=currentIssues.indexOf(id);if(i>-1)currentIssues.splice(i,1);else currentIssues.push(id);renderIssueGrid();}
+function renderPosCond(cageId){
+  var pos=getPositions(cageId);
+  document.getElementById('pos-cond-grid').innerHTML=POSITIONS.map(function(p){
+    var cond=pos[p]||'NONE';
+    var st=subInvTotals(cageId,p);
+    var sumTxt=st.total>0?st.m+'♂ '+st.f+'♀':'no animals';
+    return'<div class="pos-cond-cell '+cond+'" onclick="cyclePosCond('+cageId+',\''+p+'\')">'
+      +'<div class="pcc-label">'+p+'</div>'
+      +'<div class="pcc-cond">'+(COND_ICON[cond]||'')+' '+(cond==='NONE'?'—':cond)+'</div>'
+      +'<div class="pcc-summary">'+esc(sumTxt)+'</div>'
+      +'</div>';
+  }).join('');
+}
+function cyclePosCond(cageId,pos){
+  ensureCage(cageId);
+  var cur=DATA.cages[cageId].positions[pos]||'NONE';
+  var idx=COND_CYCLE.indexOf(cur);
+  DATA.cages[cageId].positions[pos]=COND_CYCLE[(idx+1)%COND_CYCLE.length];
+  saveData();renderPosCond(cageId);
+}
+function renderHistory(id){
+  var log=(DATA.log||[]).filter(function(e){return e.cage===id;}).slice().reverse().slice(0,8);
+  if(!log.length){document.getElementById('modal-history').innerHTML='<div style="color:var(--muted);font-size:12px">No history yet.</div>';return;}
+  document.getElementById('modal-history').innerHTML=log.map(function(e){
+    var posRows='';
+    if(e.positions){var pts=POSITIONS.filter(function(p){return e.positions[p]&&e.positions[p]!=='NONE';});if(pts.length)posRows='<div class="he-issues" style="font-size:11px">'+pts.map(function(p){return p+': '+e.positions[p];}).join(' · ')+'</div>';}
+    return'<div class="history-entry '+e.severity+'">'
+      +'<div class="he-top"><span class="he-date">'+esc(e.date)+' — '+esc(e.employee||'?')+'</span><span class="he-sev" style="background:'+sevColor(e.severity)+'22;color:'+sevColor(e.severity)+'">'+sevLabel(e.severity)+'</span></div>'
+      +(e.issues&&e.issues.length?'<div class="he-issues">'+e.issues.map(issueLabel).join(' · ')+'</div>':'')+posRows
+      +(e.notes?'<div class="he-note">'+esc(e.notes)+'</div>':'')+'</div>';
+  }).join('');
+}
+function saveEntry(sync){
+  if(!currentCageId)return;
+  var notes=document.getElementById('modal-notes').value.trim();
+  var emp=document.getElementById('modal-employee').value.trim();
+  if(emp)localStorage.setItem('srr2_emp',emp);
+  var sev=currentSev||'ok', date=nowStr();
+  ensureCage(currentCageId);
+  var c=DATA.cages[currentCageId];
+  c.severity=sev;c.issues=currentIssues.slice();c.notes=notes;c.employee=emp;c.lastDate=todayStr();
+  DATA.log.push({cage:currentCageId,severity:sev,issues:currentIssues.slice(),notes:notes,employee:emp,date:date,positions:Object.assign({},c.positions)});
+  saveData();closeModal('cage-modal');renderGrid();
+  if(sync)pushToSheet(currentCageId,sev,currentIssues,notes,emp,date,c.positions);
+  else showToast('💾 Cage '+currentCageId+' saved');
+}
+
+// ── INVENTORY MODAL ───────────────────────────────────────
+function openInvModal(cageId,pos,evt){
+  if(evt)evt.stopPropagation();
+  currentInvCage=cageId; currentInvPos=pos; currentInvGroup='het';
+  document.getElementById('inv-modal-title').textContent='Cage '+cageId+' · Sub-cage '+pos;
+  document.getElementById('inv-modal-sub').textContent='Bearded dragons in this sub-cage — select morphs, male/female, ID & weight';
+  renderInvModal();
+  document.getElementById('inv-modal').classList.add('open');
+}
+
+function renderInvModal(){
+  var cageId=currentInvCage, pos=currentInvPos;
+  ensureCage(cageId);
+  var inv=DATA.cages[cageId].inventory;
+
+  // Tabs
+  var tabs='<div class="inv-tabs">';
+  COLOR_GROUPS.forEach(function(g){
+    tabs+='<button class="inv-tab'+(g.id===currentInvGroup?' active':'')+'" data-gid="'+g.id+'" onclick="switchInvGroup(\''+g.id+'\')">'+g.label+'</button>';
+  });
+  tabs+='</div>';
+
+  // Groups
+  var groups='';
+  COLOR_GROUPS.forEach(function(g){
+    groups+='<div class="morph-group'+(g.id===currentInvGroup?' active':'')+'" data-gid="'+g.id+'">';
+    groups+='<div class="inv-section-title">'+g.label+'</div>';
+    g.colors.forEach(function(color){
+      var safe=color.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      var mk=invKey(cageId,pos,color,'m'), fk=invKey(cageId,pos,color,'f');
+      var mArr=Array.isArray(inv[mk])?inv[mk]:[];
+      var fArr=Array.isArray(inv[fk])?inv[fk]:[];
+      var tot=mArr.length+fArr.length;
+      groups+='<div class="morph-row">';
+      groups+='<div class="morph-row-top">';
+      groups+='<span class="morph-name">'+esc(color)+'</span>';
+      groups+='<span class="morph-m">♂ '+mArr.length+'</span>';
+      groups+='<button class="add-animal-btn" onclick="addAnimal(\''+safe+'\',\'m\')">+♂</button>';
+      groups+='<span class="morph-f" style="margin-left:4px">♀ '+fArr.length+'</span>';
+      groups+='<button class="add-animal-btn f" onclick="addAnimal(\''+safe+'\',\'f\')">+♀</button>';
+      if(tot>0) groups+='<span class="morph-total">'+tot+'</span>';
+      groups+='</div>';
+      if(tot>0){
+        groups+='<div class="animal-rows">';
+        ['m','f'].forEach(function(sex){
+          var arr=sex==='m'?mArr:fArr;
+          arr.forEach(function(a,i){
+            var idV=(a.animalId||'').replace(/"/g,'&quot;');
+            var wV=(a.weight||'').replace(/"/g,'&quot;');
+            var condV=(a.condition||'').replace(/"/g,'&quot;');
+            groups+='<div class="animal-row">'
+              +'<span class="ar-badge '+sex+'">'+(sex==='m'?'♂ M':'♀ F')+'</span>'
+              +'<span class="ar-label">ID:</span>'
+              +'<input class="ar-input" type="text" placeholder="BD001" value="'+idV+'" oninput="updateAnimal(\''+safe+'\',\''+sex+'\','+i+',\'animalId\',this.value)">'
+              +'<span class="ar-label">Wt:</span>'
+              +'<input class="ar-input" type="text" placeholder="120g" value="'+wV+'" oninput="updateAnimal(\''+safe+'\',\''+sex+'\','+i+',\'weight\',this.value)">'
+              +'<span class="ar-label">Cond:</span>'
+              +'<select class="ar-input" style="max-width:80px" onchange="updateAnimal(\''+safe+'\',\''+sex+'\','+i+',\'condition\',this.value)">'
+              +'<option value="">—</option>'
+              +['HEALTHY','FF','SW','SKY','SKINNY-OK'].map(function(c){return'<option value="'+c+'"'+(condV===c?' selected':'')+'>'+c+'</option>';}).join('')
+              +'</select>'
+              +'<button class="ar-del" onclick="removeAnimal(\''+safe+'\',\''+sex+'\','+i+')">✕</button>'
+              +'</div>';
+          });
+        });
+        groups+='</div>';
+      }
+      groups+='</div>';
+    });
+    groups+='</div>';
+  });
+
+  // Totals bar
+  var st=subInvTotals(cageId,pos);
+  var totals='<div class="inv-totals">'
+    +'<div class="inv-total-item"><div class="inv-total-val" style="color:#1877f2">'+st.m+'</div><div class="inv-total-label">♂ Males</div></div>'
+    +'<div class="inv-total-item"><div class="inv-total-val" style="color:#d63384">'+st.f+'</div><div class="inv-total-label">♀ Females</div></div>'
+    +'<div class="inv-total-item"><div class="inv-total-val">'+st.total+'</div><div class="inv-total-label">Total</div></div>'
+    +'</div>';
+
+  document.getElementById('inv-container').innerHTML=tabs+groups+totals;
+}
+
+function switchInvGroup(gid){
+  currentInvGroup=gid;
+  document.querySelectorAll('.inv-tab').forEach(function(el){el.classList.toggle('active',el.getAttribute('data-gid')===gid);});
+  document.querySelectorAll('.morph-group').forEach(function(el){el.classList.toggle('active',el.getAttribute('data-gid')===gid);});
+}
+
+function ensureInvArr(cageId,pos,color,sex){
+  ensureCage(cageId);
+  var k=invKey(cageId,pos,color,sex);
+  if(!Array.isArray(DATA.cages[cageId].inventory[k])) DATA.cages[cageId].inventory[k]=[];
+  return DATA.cages[cageId].inventory[k];
+}
+function addAnimal(color,sex){
+  var arr=ensureInvArr(currentInvCage,currentInvPos,color,sex);
+  arr.push({animalId:'',weight:'',condition:''});
+  saveData();renderInvModal();renderGrid();
+  setTimeout(function(){
+    var rows=document.querySelectorAll('.animal-row');
+    if(rows.length){var last=rows[rows.length-1];last.scrollIntoView({block:'nearest'});var inp=last.querySelector('.ar-input');if(inp)inp.focus();}
+  },50);
+}
+function removeAnimal(color,sex,idx){
+  var k=invKey(currentInvCage,currentInvPos,color,sex);
+  var inv=DATA.cages[currentInvCage].inventory;
+  if(!inv||!inv[k])return;
+  inv[k].splice(idx,1);
+  if(!inv[k].length)delete inv[k];
+  saveData();renderInvModal();renderGrid();
+}
+function updateAnimal(color,sex,idx,field,value){
+  var arr=ensureInvArr(currentInvCage,currentInvPos,color,sex);
+  if(!arr[idx])arr[idx]={};
+  arr[idx][field]=value;
+  saveData();
+  // refresh totals bar only
+  var st=subInvTotals(currentInvCage,currentInvPos);
+  var tb=document.querySelector('.inv-totals');
+  if(tb){
+    tb.children[0].children[0].textContent=st.m;
+    tb.children[1].children[0].textContent=st.f;
+    tb.children[2].children[0].textContent=st.total;
+  }
+  renderGrid();
+}
+
+// ── ALERTS ───────────────────────────────────────────────
+function renderAlerts(){
+  var items=[];
+  ALL_CAGES.forEach(function(id){var s=getCageState(id);if(s==='critical'||s==='urgent'||s==='warning')items.push({id:id,sev:s,issues:getCageIssues(id),c:getCage(id)});});
+  items.sort(function(a,b){return({critical:0,urgent:1,warning:2}[a.sev]||3)-({critical:0,urgent:1,warning:2}[b.sev]||3);});
+  var cnt={critical:0,urgent:0,warning:0};items.forEach(function(x){cnt[x.sev]=(cnt[x.sev]||0)+1;});
+  function sc(l,v,c){return'<div class="stat-card"><div class="stat-val" style="color:'+c+'">'+v+'</div><div class="stat-label">'+esc(l)+'</div></div>';}
+  document.getElementById('alert-summary').innerHTML=sc('🔴 Critical',cnt.critical,'#fa3e3e')+sc('🟠 Urgent',cnt.urgent,'#ff6b00')+sc('🟡 Warning',cnt.warning,'#f7b928')+sc('Total',items.length,'#1877f2');
+  if(!items.length){document.getElementById('alert-feed').innerHTML='<div class="empty-state"><div class="es-icon">✅</div><div class="es-text">No active alerts!</div></div>';return;}
+  var icons={critical:'🚨',urgent:'⚠️',warning:'🔔'};
+  document.getElementById('alert-feed').innerHTML=items.map(function(x){
+    var pos=getPositions(x.id);
+    var hcList=POSITIONS.filter(function(p){return pos[p]&&pos[p]!=='NONE';}).map(function(p){var st=subInvTotals(x.id,p);return p+': '+pos[p]+(st.total>0?' ('+st.m+'♂'+st.f+'♀)':'');});
+    return'<div class="af-card '+x.sev+'"><div class="af-icon">'+icons[x.sev]+'</div><div class="af-body"><div class="af-cage">Cage '+esc(x.id)+'</div>'+(x.issues.length?'<div class="af-issues">'+x.issues.map(issueLabel).join(' · ')+'</div>':'')+(hcList.length?'<div class="af-issues" style="font-size:11px">'+hcList.join(' · ')+'</div>':'')+(x.c.notes?'<div class="af-meta">'+esc(x.c.notes)+'</div>':'')+(x.c.employee?'<div class="af-meta">By: '+esc(x.c.employee)+'</div>':'')+'</div><button class="af-resolve" onclick="quickResolve('+x.id+')">✅ Resolve</button></div>';
+  }).join('');
+}
+function quickResolve(id){
+  ensureCage(id);var c=DATA.cages[id];
+  c.severity='ok';c.issues=[];c.notes='Resolved';c.lastDate=todayStr();c.employee=localStorage.getItem('srr2_emp')||'';
+  DATA.log.push({cage:id,severity:'ok',issues:[],notes:'Resolved',employee:c.employee,date:nowStr(),positions:Object.assign({},c.positions)});
+  saveData();renderAlerts();renderGrid();showToast('✅ Cage '+id+' resolved');
+}
+
+// ── LOG ──────────────────────────────────────────────────
+function renderLog(){
+  var search=(document.getElementById('log-search').value||'').trim().toLowerCase();
+  var filter=document.getElementById('log-filter-sel').value;
+  var log=(DATA.log||[]).slice().reverse();
+  if(search)log=log.filter(function(e){return String(e.cage).includes(search);});
+  if(filter!=='all')log=log.filter(function(e){return e.severity===filter;});
+  if(!log.length){document.getElementById('log-list').innerHTML='<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">No log entries yet.</div></div>';return;}
+  document.getElementById('log-list').innerHTML=log.slice(0,300).map(function(e){
+    var body='';
+    if((e.issues&&e.issues.length)||e.notes||e.positions){
+      body='<div class="log-body">';
+      if(e.issues&&e.issues.length)body+='<div style="margin-bottom:3px">'+e.issues.map(issueLabel).join(' · ')+'</div>';
+      if(e.positions){var pts=POSITIONS.filter(function(p){return e.positions[p]&&e.positions[p]!=='NONE';});if(pts.length)body+='<div style="margin-bottom:3px;font-size:11px">'+pts.map(function(p){return p+': '+e.positions[p];}).join(' · ')+'</div>';}
+      if(e.notes)body+='<div style="color:var(--text)">'+esc(e.notes)+'</div>';
+      if(e.employee)body+='<div style="font-size:10px;margin-top:3px">By: '+esc(e.employee)+'</div>';
+      body+='</div>';
+    }
+    return'<div class="log-card"><div class="log-card-header" onclick="openCageModal('+e.cage+')"><div><span style="font-weight:700">Cage '+esc(e.cage)+'</span><span style="font-size:11px;color:var(--muted);margin-left:8px">'+esc(e.date)+'</span></div><span class="lc-sev '+e.severity+'">'+sevLabel(e.severity)+'</span></div>'+body+'</div>';
+  }).join('');
+}
+
+// ── PAGES ────────────────────────────────────────────────
+function showPage(p){
+  ['grid','alerts','log'].forEach(function(pg){document.getElementById('page-'+pg).style.display=pg===p?'block':'none';});
+  document.querySelectorAll('.nav-tab').forEach(function(el,i){el.classList.toggle('active',['grid','alerts','log'][i]===p);});
+  if(p==='alerts')renderAlerts();if(p==='log')renderLog();
+}
+
+// ── EXPORT ───────────────────────────────────────────────
+function exportData(){
+  var rows=[['Date','Cage','Severity','Issues','A_Cond','B_Cond','C_Cond','D_Cond','E_Cond','F_Cond','Notes','Employee']];
+  (DATA.log||[]).forEach(function(e){
+    var pos=e.positions||{};
+    rows.push([e.date,e.cage,e.severity,(e.issues||[]).join('; '),
+      pos.A||'',pos.B||'',pos.C||'',pos.D||'',pos.E||'',pos.F||'',e.notes||'',e.employee||'']);
+  });
+  var csv=rows.map(function(r){return r.map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='SRR2_FreeRange_'+todayStr()+'.csv';a.click();showToast('✅ CSV exported!');
+}
+function resetDay(){
+  if(!confirm('Reset all today\'s checks?\n(History is kept)'))return;
+  ALL_CAGES.forEach(function(id){if(DATA.cages[id]&&DATA.cages[id].lastDate===todayStr())DATA.cages[id].lastDate='';});
+  saveData();renderGrid();showToast('Daily checks reset');
+}
+
+// ── CLOSE ON BACKDROP ────────────────────────────────────
+['cage-modal','inv-modal'].forEach(function(id){
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
+});
+
+// ── GOOGLE SHEETS SYNC ───────────────────────────────────
+function setSyncPill(l,bg,c){var el=document.getElementById('sync-pill');if(!el)return;el.textContent=l;el.style.background=bg;el.style.color=c;el.style.border='1px solid '+c+'44';}
+function pillState(s){
+  if(s==='ok')setSyncPill('⬤ Synced','#e6f4ea','#1a5c0c');
+  if(s==='saving')setSyncPill('⬤ Saving…','#dbeafe','#1e40af');
+  if(s==='offline')setSyncPill('⬤ Offline','#f3f4f6','#6b7280');
+  if(s==='ready')setSyncPill('⬤ Ready','#e6f4ea','#1a5c0c');
+}
+function buildInvSummary(cageId,pos){
+  var inv=DATA.cages[cageId]&&DATA.cages[cageId].inventory||{};
+  var lines=[];
+  ALL_COLORS.forEach(function(c){
+    var ma=inv[invKey(cageId,pos,c,'m')]||[],fa=inv[invKey(cageId,pos,c,'f')]||[];
+    if(!ma.length&&!fa.length)return;
+    var ids=ma.concat(fa).map(function(a){return a.animalId||'';}).filter(Boolean);
+    lines.push(c+': '+ma.length+'M '+fa.length+'F'+(ids.length?' ['+ids.join(',')+']':''));
+  });
+  return lines.join(' | ');
+}
+function pushToSheet(cageId,sev,issues,notes,emp,date,pos){
+  if(!SHEET_URL){showToast('⚠️ No Sheet URL');return;}
+  pillState('saving');
+  var ct=cageTotals(cageId);
+  var posInv={};POSITIONS.forEach(function(p){posInv[p]=buildInvSummary(cageId,p);});
+  fetch(SHEET_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'log',cageId:cageId,date:date,severity:sev,issues:issues,notes:notes,employee:emp,positions:pos||{},males:ct.m,females:ct.f,totalAnimals:ct.total,positionInventory:posInv})})
+    .then(function(){pillState('ok');showToast('✅ Cage '+cageId+' synced!');})
+    .catch(function(){pillState('offline');showToast('⚠️ Offline — saved locally');});
+}
+function syncAllToday(){
+  if(!SHEET_URL){showToast('⚠️ No Sheet URL');return;}
+  var entries=[];
+  ALL_CAGES.forEach(function(id){
+    var c=DATA.cages[id];if(!c||c.lastDate!==todayStr())return;
+    var ct=cageTotals(id);var posInv={};POSITIONS.forEach(function(p){posInv[p]=buildInvSummary(id,p);});
+    entries.push({cageId:id,date:c.lastDate,severity:c.severity||'ok',issues:c.issues||[],notes:c.notes||'',employee:c.employee||'',positions:c.positions||{},males:ct.m,females:ct.f,totalAnimals:ct.total,positionInventory:posInv});
+  });
+  if(!entries.length){showToast('ℹ️ No cages checked today');return;}
+  pillState('saving');showToast('☁️ Syncing '+entries.length+' cages…');
+  fetch(SHEET_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'bulk',entries:entries})})
+    .then(function(){pillState('ok');showToast('✅ Synced '+entries.length+' cages!');})
+    .catch(function(){pillState('offline');showToast('⚠️ Offline');});
+}
+setTimeout(function(){SHEET_URL?pillState('ready'):pillState('offline');},1000);
+
+// ── INIT ─────────────────────────────────────────────────
+renderGrid();
+</script>
+</body>
+</html>
